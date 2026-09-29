@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { getDistrictData } from "../data/mockData";
+import { getDistrictData, STATE_ABBR } from "../data/mockData";
 import {
   ChevronUp, ChevronDown, ChevronsUpDown,
-  MapPin, Table2
+  MapPin, Table2, Search
 } from "lucide-react";
 import IndiaMap from "./IndiaMap";
 
@@ -22,15 +22,13 @@ function SortIcon({ field, sort }) {
     : <ChevronDown size={12} style={{ color: "#2dd4bf" }} />;
 }
 
-
-
 export default function DistrictTable({ regime }) {
   const [sort, setSort] = useState({ field: "corrected", dir: "desc" });
   const [filter, setFilter] = useState("");
   const [page, setPage] = useState(0);
   const [animKey, setAnimKey] = useState(0);
   const raw = getDistrictData(regime);
-  const PER_PAGE = 6;
+  const PER_PAGE = 12;
 
   useEffect(() => { setPage(0); setAnimKey((k) => k + 1); }, [regime]);
 
@@ -45,7 +43,7 @@ export default function DistrictTable({ regime }) {
   const filtered = useMemo(() => {
     const q = filter.toLowerCase();
     return raw.filter(
-      (d) => d.district.toLowerCase().includes(q) || d.state.toLowerCase().includes(q)
+      (d) => d.district.toLowerCase().includes(q) || d.state.toLowerCase().includes(q) || (d.abbr && d.abbr.toLowerCase().includes(q))
     );
   }, [raw, filter]);
 
@@ -70,6 +68,18 @@ export default function DistrictTable({ regime }) {
     { key: "category", label: "Category" },
   ];
 
+  // Pagination helper: show max 7 page buttons
+  const getPageButtons = () => {
+    if (pages <= 7) return Array.from({ length: pages }, (_, i) => i);
+    const start = Math.max(0, Math.min(page - 2, pages - 5));
+    const end = Math.min(pages, start + 5);
+    const btns = [];
+    if (start > 0) { btns.push(0); if (start > 1) btns.push(-1); }
+    for (let i = start; i < end; i++) btns.push(i);
+    if (end < pages) { if (end < pages - 1) btns.push(-2); btns.push(pages - 1); }
+    return btns;
+  };
+
   return (
     <div className="glass rounded-2xl p-6">
       {/* Header */}
@@ -79,33 +89,38 @@ export default function DistrictTable({ regime }) {
             <Table2 size={16} style={{ color: "#2dd4bf" }} />
             District-Level Rainfall
           </h2>
-          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>24-hour accumulated forecast · click headers to sort</p>
+          <p style={{ margin: "4px 0 0", fontSize: 12, color: "#64748b" }}>
+            {raw.length} districts · 24-hour accumulated forecast · click headers to sort
+          </p>
         </div>
-        <input
-          style={{
-            fontSize: 13,
-            padding: "8px 14px",
-            borderRadius: 12,
-            color: "#cbd5e1",
-            outline: "none",
-            background: "rgba(255,255,255,0.05)",
-            border: "1px solid rgba(255,255,255,0.09)",
-            width: 200,
-          }}
-          placeholder="Search district / state…"
-          value={filter}
-          onChange={(e) => { setFilter(e.target.value); setPage(0); }}
-        />
+        <div style={{ position: "relative" }}>
+          <Search size={14} style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", color: "#475569" }} />
+          <input
+            style={{
+              fontSize: 13,
+              padding: "8px 14px 8px 30px",
+              borderRadius: 12,
+              color: "#cbd5e1",
+              outline: "none",
+              background: "rgba(255,255,255,0.05)",
+              border: "1px solid rgba(255,255,255,0.09)",
+              width: 220,
+            }}
+            placeholder="Search district or state…"
+            value={filter}
+            onChange={(e) => { setFilter(e.target.value); setPage(0); }}
+          />
+        </div>
       </div>
 
       {/* Map + Table grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
-        <div className="lg:col-span-1">
+      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
+        <div className="lg:col-span-2" style={{ minHeight: "450px" }}>
           <IndiaMap districtData={raw} />
         </div>
 
         {/* Table */}
-        <div className="lg:col-span-2 overflow-x-auto rounded-xl" key={animKey}>
+        <div className="lg:col-span-3 overflow-x-auto rounded-xl" key={animKey}>
           <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
@@ -138,10 +153,10 @@ export default function DistrictTable({ regime }) {
                 const cat = categoryColors[row.category] || categoryColors["Light"];
                 return (
                   <tr
-                    key={`${regime}-${row.district}`}
+                    key={`${regime}-${row.district}-${row.state}`}
                     style={{
                       borderBottom: "1px solid rgba(255,255,255,0.04)",
-                      animation: `fadeSlideIn 0.35s ease ${i * 50}ms both`,
+                      animation: `fadeSlideIn 0.35s ease ${i * 40}ms both`,
                       transition: "background 0.15s ease",
                     }}
                     onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
@@ -193,27 +208,53 @@ export default function DistrictTable({ regime }) {
               <span style={{ fontSize: 11, color: "#475569" }}>
                 {sorted.length} districts · Page {page + 1} / {pages}
               </span>
-              <div style={{ display: "flex", gap: 4 }}>
-                {Array.from({ length: pages }).map((_, p) => (
-                  <button
-                    key={p}
-                    onClick={() => setPage(p)}
-                    style={{
-                      width: 28, height: 28,
-                      borderRadius: 8,
-                      fontSize: 11,
-                      fontWeight: 500,
-                      cursor: "pointer",
-                      border: "none",
-                      outline: "none",
-                      background: page === p ? "rgba(45,212,191,0.16)" : "rgba(255,255,255,0.04)",
-                      color: page === p ? "#2dd4bf" : "#64748b",
-                      transition: "background 0.15s ease, color 0.15s ease",
-                    }}
-                  >
-                    {p + 1}
-                  </button>
+              <div style={{ display: "flex", gap: 4, alignItems: "center" }}>
+                <button
+                  onClick={() => setPage(Math.max(0, page - 1))}
+                  disabled={page === 0}
+                  style={{
+                    padding: "4px 8px", borderRadius: 8, fontSize: 11, cursor: page === 0 ? "default" : "pointer",
+                    border: "none", outline: "none",
+                    background: "rgba(255,255,255,0.04)", color: page === 0 ? "#334155" : "#94a3b8",
+                  }}
+                >
+                  ←
+                </button>
+                {getPageButtons().map((p, idx) => (
+                  p < 0 ? (
+                    <span key={`e${idx}`} style={{ color: "#475569", fontSize: 11, padding: "0 2px" }}>…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p)}
+                      style={{
+                        width: 28, height: 28,
+                        borderRadius: 8,
+                        fontSize: 11,
+                        fontWeight: 500,
+                        cursor: "pointer",
+                        border: "none",
+                        outline: "none",
+                        background: page === p ? "rgba(45,212,191,0.16)" : "rgba(255,255,255,0.04)",
+                        color: page === p ? "#2dd4bf" : "#64748b",
+                        transition: "background 0.15s ease, color 0.15s ease",
+                      }}
+                    >
+                      {p + 1}
+                    </button>
+                  )
                 ))}
+                <button
+                  onClick={() => setPage(Math.min(pages - 1, page + 1))}
+                  disabled={page === pages - 1}
+                  style={{
+                    padding: "4px 8px", borderRadius: 8, fontSize: 11, cursor: page === pages - 1 ? "default" : "pointer",
+                    border: "none", outline: "none",
+                    background: "rgba(255,255,255,0.04)", color: page === pages - 1 ? "#334155" : "#94a3b8",
+                  }}
+                >
+                  →
+                </button>
               </div>
             </div>
           )}

@@ -6,7 +6,7 @@ import {
   ZoomableGroup,
 } from "react-simple-maps";
 
-const GEO_URL = "/india-fixed.geojson";
+const GEO_URL = "/india-districts.topo.json";
 
 // ── Category → fill color (earthy palette) ──────────────────
 const CATEGORY_FILL = {
@@ -16,50 +16,6 @@ const CATEGORY_FILL = {
   "Moderate":        { fill: "#1aab9d", stroke: "#0e7a70", label: "#2dd4bf" },
   "Light":           { fill: "#4cd5a4", stroke: "#29a07a", label: "#6ee7b7" },
   default:           { fill: "#1c2a26", stroke: "#263833", label: "#475569" },
-};
-
-// Map GeoJSON STNAME_SH → mock data state names
-const STATE_NAME_MAP = {
-  "Andaman & Nicobar":  "Andaman and Nicobar",
-  "Andaman & Nicobar Island": "Andaman and Nicobar",
-  "Andaman and Nicobar Islands": "Andaman and Nicobar",
-  "Arunachal Pradesh":  "Arunachal Pradesh",
-  "Assam":              "Assam",
-  "Bihar":              "Bihar",
-  "Chandigarh":         "Chandigarh",
-  "Chhattisgarh":       "Chhattisgarh",
-  "Dadra & Nagar Haveli": "Dadra and Nagar Haveli",
-  "Daman & Diu":        "Daman and Diu",
-  "Dadra and Nagar Haveli and Daman and Diu": "Dadra and Nagar Haveli",
-  "Delhi":              "Delhi",
-  "Goa":                "Goa",
-  "Gujarat":            "Gujarat",
-  "Haryana":            "Haryana",
-  "Himachal Pradesh":   "Himachal Pradesh",
-  "Jammu & Kashmir":    "Jammu and Kashmir",
-  "Jammu and Kashmir":  "Jammu and Kashmir",
-  "Jharkhand":          "Jharkhand",
-  "Karnataka":          "Karnataka",
-  "Kerala":             "Kerala",
-  "Ladakh":             "Ladakh",
-  "Lakshadweep":        "Lakshadweep",
-  "Madhya Pradesh":     "Madhya Pradesh",
-  "Maharashtra":        "Maharashtra",
-  "Manipur":            "Manipur",
-  "Meghalaya":          "Meghalaya",
-  "Mizoram":            "Mizoram",
-  "Nagaland":           "Nagaland",
-  "Odisha":             "Odisha",
-  "Puducherry":         "Puducherry",
-  "Punjab":             "Punjab",
-  "Rajasthan":          "Rajasthan",
-  "Sikkim":             "Sikkim",
-  "Tamil Nadu":         "Tamil Nadu",
-  "Telangana":          "Telangana",
-  "Tripura":            "Tripura",
-  "Uttar Pradesh":      "UP",
-  "Uttarakhand":        "Uttarakhand",
-  "West Bengal":        "West Bengal",
 };
 
 const PRIORITY = [
@@ -91,35 +47,44 @@ function MapInner({ districtData }) {
   const [tooltip, setTooltip] = useState(null);
   const [position, setPosition] = useState({ coordinates: [79.5, 22.5], zoom: 1 });
 
-  const stateCategoryMap = useMemo(() => {
+  // Build a lookup: "DistrictName|StateName" -> district data entry
+  const districtCategoryMap = useMemo(() => {
     const map = {};
     (districtData || []).forEach(d => {
-      const state = d.state;
-      const cat = d.category;
-      if (!map[state]) {
-        map[state] = cat;
-      } else {
-        const existing = PRIORITY.indexOf(map[state]);
-        const incoming = PRIORITY.indexOf(cat);
-        if (incoming !== -1 && (existing === -1 || incoming < existing)) {
-          map[state] = cat;
-        }
-      }
+      // Key by district+state to handle duplicate district names across states
+      const key = `${d.district}|${d.state}`;
+      map[key] = d;
     });
     return map;
   }, [districtData]);
 
-  const stateDistrictMap = useMemo(() => {
+  // Also build a lookup by just district name for fuzzy matching
+  const districtByName = useMemo(() => {
     const map = {};
     (districtData || []).forEach(d => {
-      if (!map[d.state]) map[d.state] = [];
-      map[d.state].push(d);
+      map[d.district.toLowerCase()] = d;
     });
     return map;
   }, [districtData]);
 
   const handleMove = (e) => {
     if (tooltip) setTooltip(t => ({ ...t, x: e.clientX, y: e.clientY }));
+  };
+
+  // Find the matching mock data for a given GeoJSON district feature
+  const findDistrictData = (geo) => {
+    const distName = geo.properties.NAME_2 || "";
+    const stateName = geo.properties.NAME_1 || "";
+    
+    // Try exact key match first
+    const exactKey = `${distName}|${stateName}`;
+    if (districtCategoryMap[exactKey]) return districtCategoryMap[exactKey];
+    
+    // Fuzzy match by district name
+    const lowerDist = distName.toLowerCase();
+    if (districtByName[lowerDist]) return districtByName[lowerDist];
+    
+    return null;
   };
 
   return (
@@ -156,34 +121,38 @@ function MapInner({ districtData }) {
       <ComposableMap projection="geoMercator" projectionConfig={{ center: [79.5, 22.5], scale: 1050 }} style={{ width: "100%", height: "100%" }}>
         <ZoomableGroup center={position.coordinates} zoom={position.zoom} onMoveEnd={setPosition} minZoom={0.8} maxZoom={6}>
           <Geographies geography={GEO_URL}>
-            {({ geographies, error }) => {
-              if (error) {
-                console.error("Geographies error:", error);
-                return <text x={10} y={100} fill="red">Error loading map data.</text>;
-              }
-              if (!geographies || geographies.length === 0) {
-                return null;
-              }
+            {({ geographies }) => {
+              if (!geographies || geographies.length === 0) return null;
               return geographies.map((geo) => {
-                const geoName = geo.properties.STNAME_SH || geo.properties.NAME_1 || geo.properties.name || "Unknown";
-                const mockStateName = STATE_NAME_MAP[geoName] || geoName;
-                const category = stateCategoryMap[mockStateName];
+                const distName = geo.properties.NAME_2 || "Unknown";
+                const stateName = geo.properties.NAME_1 || "";
+                const data = findDistrictData(geo);
+                const category = data?.category;
                 const cfg = CATEGORY_FILL[category] || CATEGORY_FILL.default;
-                const districts = stateDistrictMap[mockStateName] || [];
-                const isHovered = tooltip && tooltip.name === geoName;
+                const isHovered = tooltip && tooltip.distName === distName && tooltip.stateName === stateName;
                 const currentFill = isHovered ? (category ? cfg.label : "#2a3d38") : cfg.fill;
 
                 return (
                   <Geography
                     key={geo.rsmKey}
                     geography={geo}
-                    onMouseEnter={(e) => setTooltip({ name: geoName, category, districts, x: e.clientX, y: e.clientY })}
+                    onMouseEnter={(e) => setTooltip({
+                      distName,
+                      stateName,
+                      category,
+                      rainfall: data?.corrected,
+                      raw: data?.raw,
+                      bias: data?.bias,
+                      abbr: data?.abbr,
+                      x: e.clientX,
+                      y: e.clientY
+                    })}
                     onMouseLeave={() => setTooltip(null)}
                     fill={currentFill}
                     stroke={cfg.stroke}
-                    strokeWidth={isHovered ? 0.8 : 0.5}
+                    strokeWidth={isHovered ? 0.7 : 0.25}
                     style={{
-                      default: { outline: "none", transition: "all 0.3s ease" },
+                      default: { outline: "none", transition: "all 0.2s ease" },
                       hover: { outline: "none", cursor: "pointer" },
                       pressed: { outline: "none" },
                     }}
@@ -199,22 +168,35 @@ function MapInner({ districtData }) {
         <div style={{
           position: "fixed", left: tooltip.x + 12, top: tooltip.y - 10, zIndex: 9999,
           background: "rgba(17,22,20,0.96)", border: "1px solid rgba(255,255,255,0.12)",
-          borderRadius: 10, padding: "8px 12px", pointerEvents: "none", minWidth: 140, maxWidth: 220,
+          borderRadius: 10, padding: "8px 12px", pointerEvents: "none", minWidth: 160, maxWidth: 240,
           backdropFilter: "blur(12px)",
         }}>
-          <p style={{ margin: "0 0 4px", fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>{tooltip.name}</p>
+          <p style={{ margin: "0 0 2px", fontSize: 12, fontWeight: 700, color: "#e2e8f0" }}>
+            {tooltip.distName}
+          </p>
+          <p style={{ margin: "0 0 6px", fontSize: 10, color: "#64748b" }}>
+            {tooltip.stateName} {tooltip.abbr ? `[${tooltip.abbr}]` : ""}
+          </p>
           {tooltip.category ? (
             <>
-              <p style={{ margin: "0 0 6px", fontSize: 10, color: CATEGORY_FILL[tooltip.category]?.label || "#94a3b8" }}>Max intensity: {tooltip.category}</p>
-              {tooltip.districts.slice(0, 3).map((d, i) => (
-                <div key={i} style={{ display: "flex", justifyContent: "space-between", gap: 8, fontSize: 10, color: "#64748b", marginTop: 2 }}>
-                  <span>{d.district}</span>
-                  <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#2dd4bf" }}>{d.corrected} mm</span>
-                </div>
-              ))}
-              {tooltip.districts.length > 3 && (
-                <p style={{ fontSize: 9, color: "#475569", marginTop: 3 }}>+{tooltip.districts.length - 3} more districts</p>
-              )}
+              <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 4 }}>
+                <span style={{ width: 8, height: 8, borderRadius: 2, background: CATEGORY_FILL[tooltip.category]?.fill }} />
+                <span style={{ fontSize: 10, color: CATEGORY_FILL[tooltip.category]?.label || "#94a3b8", fontWeight: 600 }}>
+                  {tooltip.category}
+                </span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#94a3b8", gap: 12 }}>
+                <span>AI Corrected</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#2dd4bf", fontWeight: 600 }}>{tooltip.rainfall} mm</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#64748b", gap: 12, marginTop: 2 }}>
+                <span>Raw NWP</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace" }}>{tooltip.raw} mm</span>
+              </div>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#64748b", gap: 12, marginTop: 2 }}>
+                <span>Bias</span>
+                <span style={{ fontFamily: "'JetBrains Mono', monospace", color: "#c2714f" }}>-{tooltip.bias} mm</span>
+              </div>
             </>
           ) : (
             <p style={{ margin: 0, fontSize: 10, color: "#475569" }}>No forecast data</p>
