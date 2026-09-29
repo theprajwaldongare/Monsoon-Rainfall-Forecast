@@ -66,10 +66,17 @@ function KpiCard({ label, value, sub, color, icon: Icon }) {
   );
 }
 
+const TABS = [
+  { id: "overview", label: "Dashboard Overview" },
+  { id: "geospatial", label: "Geospatial Analysis" },
+  { id: "verification", label: "Model Verification" }
+];
+
 export default function App() {
   const [regime, setRegime] = useState("active_monsoon");
   const [time, setTime] = useState(new Date());
   const [transitioning, setTransitioning] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   const currentRegime = REGIMES.find((r) => r.id === regime);
   const Icon = iconMap[currentRegime.icon] || Activity;
@@ -98,7 +105,7 @@ export default function App() {
 
   return (
     <div
-      className="min-h-screen relative"
+      className="min-h-screen relative flex flex-col"
       style={{
         background: `radial-gradient(ellipse 70% 45% at 50% -10%, ${currentRegime.color}12, transparent), #111614`,
         transition: "background 0.9s ease",
@@ -145,8 +152,8 @@ export default function App() {
           </span>
         </div>
 
-        {/* Right: clock + selector */}
-        <div className="flex items-center gap-3 flex-wrap justify-end">
+        {/* Right side */}
+        <div className="flex items-center gap-4">
           <div className="hidden sm:flex flex-col items-end">
             <span className="text-sm font-mono font-bold text-white">{timeStr} IST</span>
             <span className="text-xs text-slate-500">{dateStr}</span>
@@ -157,7 +164,7 @@ export default function App() {
 
       {/* ── Main content ── */}
       <main
-        className="relative z-10 max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 space-y-5"
+        className="relative z-10 w-full max-w-screen-2xl mx-auto px-4 sm:px-6 py-6 flex-1 flex flex-col"
         style={{
           opacity: transitioning ? 0 : 1,
           transform: transitioning ? "translateY(6px)" : "translateY(0)",
@@ -166,7 +173,7 @@ export default function App() {
       >
         {/* ── Regime Banner ── */}
         <div
-          className="rounded-2xl p-5 flex items-center justify-between flex-wrap gap-4"
+          className="rounded-2xl p-5 flex items-center justify-between flex-wrap gap-4 mb-5"
           style={{
             background: `linear-gradient(135deg, ${currentRegime.color}18, ${currentRegime.color}08)`,
             border: `1px solid ${currentRegime.color}30`,
@@ -218,27 +225,60 @@ export default function App() {
         </div>
 
         {/* ── KPI row ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <KpiCard label="Model" value="UNet-MoE" sub="Regime-Gated" color={currentRegime.color} icon={Cpu} />
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
           <KpiCard label="Base NWP" value="GFS 0.25°" sub="IMD Operational" color="#2dd4bf" icon={Database} />
           <KpiCard label="Latency" value="~4.2 s" sub="GPU Inference" color="#6ee7b7" icon={Activity} />
           <KpiCard label="Valid Time" value="72 h" sub="6-hourly steps" color="#d97706" icon={Clock} />
         </div>
 
-        {/* ── Forecast Comparison ── */}
-        <ForecastComparison regime={regime} />
+        {/* ── Sidebar + Dynamic Content Layout ── */}
+        <div className="flex flex-col md:flex-row gap-6 flex-1">
+          {/* Left Navigation Sidebar */}
+          <aside className="w-full md:w-56 shrink-0 flex flex-row md:flex-col gap-2 overflow-x-auto md:overflow-visible pb-2 md:pb-0 md:sticky md:top-28 self-start z-10">
+            {TABS.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setActiveTab(tab.id)}
+                className="px-5 py-3.5 text-sm font-semibold transition-all duration-200 cursor-pointer rounded-xl flex items-center justify-between group whitespace-nowrap md:whitespace-normal"
+                style={{
+                  background: activeTab === tab.id ? `${currentRegime.color}15` : "transparent",
+                  color: activeTab === tab.id ? currentRegime.color : "#64748b",
+                  border: `1px solid ${activeTab === tab.id ? currentRegime.color + "40" : "transparent"}`,
+                }}
+              >
+                {tab.label}
+                {activeTab === tab.id && (
+                  <div className="w-1.5 h-1.5 rounded-full" style={{ background: currentRegime.color }} />
+                )}
+              </button>
+            ))}
+          </aside>
 
-        {/* ── Alerts + Verification side by side on large screens ── */}
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-          <AlertsSection regime={regime} />
-          <VerificationSection regime={regime} />
+          {/* Right Content Area */}
+          <div className="flex-1 min-w-0">
+            {activeTab === "overview" && (
+              <div className="space-y-6 animate-[fadeSlideIn_0.3s_ease]">
+                <ForecastComparison regime={regime} />
+                <AlertsSection regime={regime} />
+              </div>
+            )}
+
+            {activeTab === "geospatial" && (
+              <div className="animate-[fadeSlideIn_0.3s_ease] w-full">
+                <DistrictTable regime={regime} />
+              </div>
+            )}
+
+            {activeTab === "verification" && (
+              <div className="animate-[fadeSlideIn_0.3s_ease] w-full">
+                <VerificationSection regime={regime} />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* ── District Table ── */}
-        <DistrictTable regime={regime} />
-
         {/* ── Footer ── */}
-        <footer className="pt-4 pb-2 flex items-center justify-between flex-wrap gap-3"
+        <footer className="mt-8 pt-4 pb-2 flex items-center justify-between flex-wrap gap-3"
           style={{ borderTop: "1px solid rgba(255,255,255,0.05)" }}>
           <div className="flex items-center gap-2 text-xs text-slate-600">
             <RefreshCw size={11} />

@@ -115,4 +115,9 @@
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 240px), 1fr));
     gap: 12px;
   }
+
+  /* Force remove focus outline on map paths */
+  path {
+    outline: none !important;
+  }
 }

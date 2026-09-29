@@ -50,7 +50,7 @@ function StatCard({ label, rawValue, aiValue, unit = "", lowerBetter = false }) 
       border: "1px solid rgba(255,255,255,0.07)",
       backdropFilter: "blur(12px)",
       borderRadius: 14,
-      padding: "18px 20px",
+      padding: "22px 24px",
       display: "flex",
       flexDirection: "column",
       gap: 12,
@@ -198,12 +198,7 @@ export default function VerificationSection({ regime }) {
       </div>
 
       {/* ── Summary stat cards ── */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 160px), 1fr))",
-        gap: 12,
-        marginBottom: 22,
-      }}>
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <StatCard
           label="RMSE"
           rawValue={data.summary.rmse_raw}

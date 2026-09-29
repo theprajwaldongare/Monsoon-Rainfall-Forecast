@@ -4,6 +4,7 @@ import {
   ChevronUp, ChevronDown, ChevronsUpDown,
   MapPin, Table2
 } from "lucide-react";
+import IndiaMap from "./IndiaMap";
 
 // ── Earthy category palette ──
 const categoryColors = {
@@ -21,53 +22,7 @@ function SortIcon({ field, sort }) {
     : <ChevronDown size={12} style={{ color: "#2dd4bf" }} />;
 }
 
-// Schematic India map placeholder
-function IndiaMapPlaceholder({ data }) {
-  return (
-    <div
-      style={{
-        position: "relative",
-        display: "flex",
-        alignItems: "center",
-        justifyContent: "center",
-        minHeight: 260,
-        background: "rgba(255,255,255,0.025)",
-        border: "1px solid rgba(255,255,255,0.07)",
-        borderRadius: 14,
-        overflow: "hidden",
-      }}
-    >
-      <svg viewBox="0 0 200 240" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", opacity: 0.55 }} preserveAspectRatio="xMidYMid meet">
-        {/* Simplified India outline — earthy border */}
-        <path
-          d="M80,20 L120,18 L148,30 L162,55 L170,80 L165,110 L155,130 L145,155 L130,180 L115,205 L100,220 L88,210 L75,185 L60,160 L50,135 L42,110 L38,80 L45,55 L58,32 Z"
-          fill="rgba(45,212,191,0.05)"
-          stroke="rgba(45,212,191,0.22)"
-          strokeWidth="1.2"
-        />
-        {/* Rainfall circles */}
-        {data.slice(0, 8).map((d, i) => {
-          const x = 60 + (i % 4) * 24;
-          const y = 50 + Math.floor(i / 4) * 60;
-          const r = Math.min(12, (d.corrected / 230) * 20 + 3);
-          const col = categoryColors[d.category] || categoryColors["Light"];
-          return (
-            <g key={i}>
-              <circle cx={x} cy={y} r={r} fill={col.dot} opacity={0.28} />
-              <circle cx={x} cy={y} r={r * 0.5} fill={col.dot} opacity={0.65} />
-              <title>{d.district}: {d.corrected} mm</title>
-            </g>
-          );
-        })}
-      </svg>
-      <div style={{ position: "relative", zIndex: 1, textAlign: "center" }}>
-        <MapPin size={26} style={{ color: "#2dd4bf", opacity: 0.5, margin: "0 auto 6px" }} />
-        <p style={{ fontSize: 11, color: "#475569", margin: 0 }}>Rainfall Intensity Map</p>
-        <p style={{ fontSize: 10, color: "#334155", margin: "3px 0 0" }}>Schematic · GIS overlay available</p>
-      </div>
-    </div>
-  );
-}
+
 
 export default function DistrictTable({ regime }) {
   const [sort, setSort] = useState({ field: "corrected", dir: "desc" });
@@ -146,7 +101,7 @@ export default function DistrictTable({ regime }) {
       {/* Map + Table grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
         <div className="lg:col-span-1">
-          <IndiaMapPlaceholder data={sorted} />
+          <IndiaMap districtData={raw} />
         </div>
 
         {/* Table */}
