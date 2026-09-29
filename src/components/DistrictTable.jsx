@@ -62,9 +62,9 @@ export default function DistrictTable({ regime }) {
   const cols = [
     { key: "district", label: "District" },
     { key: "state", label: "State" },
-    { key: "raw", label: "Raw NWP (mm)" },
-    { key: "corrected", label: "AI Corrected (mm)" },
-    { key: "bias", label: "Bias (mm)" },
+    { key: "raw", label: "Raw NWP\n(mm)" },
+    { key: "corrected", label: "AI Corrected\n(mm)" },
+    { key: "bias", label: "Bias\n(mm)" },
     { key: "category", label: "Category" },
   ];
 
@@ -114,13 +114,13 @@ export default function DistrictTable({ regime }) {
       </div>
 
       {/* Map + Table grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-5 gap-4 mb-4">
-        <div className="lg:col-span-2" style={{ minHeight: "450px" }}>
+      <div className="grid grid-cols-1 lg:grid-cols-7 gap-4 mb-4">
+        <div className="lg:col-span-3" style={{ minHeight: "480px" }}>
           <IndiaMap districtData={raw} />
         </div>
 
         {/* Table */}
-        <div className="lg:col-span-3 overflow-x-auto rounded-xl" key={animKey}>
+        <div className="lg:col-span-4 overflow-x-auto rounded-xl" key={animKey}>
           <table style={{ width: "100%", fontSize: 13, borderCollapse: "collapse" }}>
             <thead>
               <tr style={{ borderBottom: "1px solid rgba(255,255,255,0.08)" }}>
@@ -129,15 +129,16 @@ export default function DistrictTable({ regime }) {
                     key={col.key}
                     onClick={() => toggleSort(col.key)}
                     style={{
-                      padding: "10px 12px",
+                      padding: "8px 6px",
                       textAlign: "left",
                       fontSize: 11,
                       fontWeight: 600,
                       color: sort.field === col.key ? "#94a3b8" : "#64748b",
                       cursor: "pointer",
-                      whiteSpace: "nowrap",
+                      whiteSpace: "pre-wrap",
                       userSelect: "none",
                       letterSpacing: "0.02em",
+                      verticalAlign: "bottom",
                     }}
                   >
                     <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
@@ -162,17 +163,17 @@ export default function DistrictTable({ regime }) {
                     onMouseEnter={(e) => e.currentTarget.style.background = "rgba(255,255,255,0.03)"}
                     onMouseLeave={(e) => e.currentTarget.style.background = "transparent"}
                   >
-                    <td style={{ padding: "10px 12px", fontWeight: 500, color: "#e2e8f0", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "8px 6px", fontWeight: 500, color: "#e2e8f0", whiteSpace: "nowrap" }}>
                       <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
                         <MapPin size={11} style={{ color: "#475569", flexShrink: 0 }} />
                         {row.district}
                       </span>
                     </td>
-                    <td style={{ padding: "10px 12px", color: "#64748b", whiteSpace: "nowrap" }}>{row.state}</td>
-                    <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "#e0956e" }}>{row.raw}</td>
-                    <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "#2dd4bf" }}>{row.corrected}</td>
-                    <td style={{ padding: "10px 12px", fontFamily: "'JetBrains Mono', monospace", color: "#a18c5a" }}>+{row.bias}</td>
-                    <td style={{ padding: "10px 12px" }}>
+                    <td style={{ padding: "8px 6px", color: "#64748b", whiteSpace: "nowrap", fontSize: 12 }}>{row.state}</td>
+                    <td style={{ padding: "8px 6px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "#e0956e" }}>{row.raw}</td>
+                    <td style={{ padding: "8px 6px", fontFamily: "'JetBrains Mono', monospace", fontWeight: 600, color: "#2dd4bf" }}>{row.corrected}</td>
+                    <td style={{ padding: "8px 6px", fontFamily: "'JetBrains Mono', monospace", color: "#a18c5a" }}>+{row.bias}</td>
+                    <td style={{ padding: "8px 6px" }}>
                       <span style={{
                         display: "inline-flex",
                         alignItems: "center",

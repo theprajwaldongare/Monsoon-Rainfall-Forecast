@@ -6,7 +6,7 @@ import {
   ZoomableGroup,
 } from "react-simple-maps";
 
-const GEO_URL = "/india-districts.topo.json";
+const GEO_URL = "/india-districts-v2.topo.json";
 
 // ── Category → fill color (earthy palette) ──────────────────
 const CATEGORY_FILL = {
@@ -150,7 +150,7 @@ function MapInner({ districtData }) {
                     onMouseLeave={() => setTooltip(null)}
                     fill={currentFill}
                     stroke={cfg.stroke}
-                    strokeWidth={isHovered ? 0.7 : 0.25}
+                    strokeWidth={isHovered ? 0.7 : 0.35}
                     style={{
                       default: { outline: "none", transition: "all 0.2s ease" },
                       hover: { outline: "none", cursor: "pointer" },
